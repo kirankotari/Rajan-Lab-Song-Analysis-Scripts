@@ -24,6 +24,8 @@ WinLen = ones(1, size(Window,2))*WindowSize;
 WinLen = num2cell(WinLen);
 
 [Pxx, f] = cellfun(@pmtm, Window, BandWidth, WinLen, Fs, 'UniformOutput', 0);
+% for i = 1:length(Window),
+    
 PowSpect1 = cell2mat(Pxx);
 PowSpect = 10*log10(abs(cell2mat(Pxx)));
 Freq = f{1};
