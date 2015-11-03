@@ -22,7 +22,7 @@ function varargout = ASSLReviewTemplateMatching(varargin)
 
 % Edit the above text to modify the response to help ASSLReviewTemplateMatching
 
-% Last Modified by GUIDE v2.5 15-Aug-2015 17:20:38
+% Last Modified by GUIDE v2.5 03-Nov-2015 00:33:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,6 +58,10 @@ handles.output = hObject;
 % Initialise some variables using either default values or values that have
 % been passed while calling the function (RR 07 Jan 2013)
 
+handles.ASSLReviewTMResults.SpectCeil = get(handles.SpectrumCeilSlider, 'Value');
+handles.ASSLReviewTMResults.SpectFloor = get(handles.SpectrumFloorSlider, 'Value');
+handles.ASSLReviewTMResults.Brightness = get(handles.BrightnessSlider, 'Value');
+
 handles.ASSLReviewTMResults.LoResHiRes = 1;
 set(handles.LoResHiResToggle, 'Value', handles.ASSLReviewTMResults.LoResHiRes);
 set(handles.LoResHiResToggle, 'String', 'High Res Spectrogram');
@@ -66,7 +70,11 @@ if (nargin >= 1)
     handles.ASSLReviewTMResults = varargin{1};
     
     handles.ASSLReviewTMResults.LoResHiRes = 1;
- 
+    
+    handles.ASSLReviewTMResults.SpectCeil = get(handles.SpectrumCeilSlider, 'Value');
+    handles.ASSLReviewTMResults.SpectFloor = get(handles.SpectrumFloorSlider, 'Value');
+    handles.ASSLReviewTMResults.Brightness = get(handles.BrightnessSlider, 'Value');
+
     cla(handles.TemplateSpecAxis);
     axes(handles.TemplateSpecAxis);
     
@@ -98,6 +106,7 @@ handles.ASSLReviewTMResults.ZoomAmpAxisLimits = handles.ASSLReviewTMResults.AmpA
 handles.ASSLReviewTMResults.ZoomLabelAxisLimits = handles.ASSLReviewTMResults.LabelAxisLimits;
 
 handles.ASSLReviewTMResults.TimeStep = str2double(get(handles.TimeStepEdit, 'String'));
+
 % Update handles structure
 guidata(hObject, handles);
 
@@ -1366,3 +1375,150 @@ soundsc(RawData, Fs);
 delete(LeftLimitLine);
 delete(RightLimitLine);
 set(handles.InstructionsTextLabel, 'String', 'Instructions:');
+
+
+% --- Executes on button press in SplitMultipleSyllsButton.
+function SplitMultipleSyllsButton_Callback(hObject, eventdata, handles)
+% hObject    handle to SplitMultipleSyllsButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+handles.ASSLReviewTMResults.PrevSyllLabels{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllLabels{handles.ASSLReviewTMResults.FileIndex};
+handles.ASSLReviewTMResults.PrevSyllOnsets{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex};
+handles.ASSLReviewTMResults.PrevSyllOffsets{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex};
+
+Flag = 1;
+
+set(handles.InstructionsTextLabel, 'String', 'Instructions: First click within the axis and then enter the threshold that has to be used to split the syllable');
+
+axes(handles.ReviewSpecAxis);
+[x, y, button] = ginput(1);
+
+NewThreshold = inputdlg('Enter the amplitude threshold for splitting the syllable', 'Syllable threshold');
+NewThreshold = str2double(NewThreshold{1});
+
+while (Flag == 1)
+    set(handles.InstructionsTextLabel, 'String', 'Left click on each individual syllable that needs to be split. Right click to quit');
+    [x, y, button] = ginput(1);
+    x(1) = x(1)*1000;
+    
+    if (button == 3)
+        Flag = 0;
+        break;
+    end
+    
+    SyllableStart = find(handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex} <= x(1), 1, 'last');
+    if (x(1) > handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart))
+        disp('Click inside a syllable');
+    else
+        [RawData, Fs] = ASSLGetRawData(handles.ASSLReviewTMResults.DirName, handles.ASSLReviewTMResults.FileName{handles.ASSLReviewTMResults.FileIndex}, handles.ASSLReviewTMResults.FileType, handles.ASSLReviewTMResults.SongChanNo);
+        Time = (1:1:length(RawData))/Fs;
+        [LogAmplitude] = ASSLCalculateLogAmplitudeAronovFee(RawData, Fs, Time, handles.ASSLReviewTMResults.FFTWinSizeSegmenting, handles.ASSLReviewTMResults.FFTWinOverlapSegmenting, handles.ASSLReviewTMResults.HiPassCutOff, handles.ASSLReviewTMResults.LoPassCutOff);
+
+        SyllStart = round(handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart) * Fs/1000);
+        SyllEnd = round(handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart) * Fs/1000);
+        [TempOnsets, TempOffsets] = ASSLSegmentData(LogAmplitude(SyllStart:SyllEnd), Fs, 0, 0, NewThreshold);
+        
+        TempOnsets = TempOnsets + handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart);
+        TempOffsets = TempOffsets + handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart);
+        
+        handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex}(SyllableStart) = TempOffsets(1);
+        
+        for i = 2:length(TempOnsets),
+            handles.ASSLReviewTMResults.SyllLabels{handles.ASSLReviewTMResults.FileIndex}(end + 1) = handles.ASSLReviewTMResults.SyllLabels{handles.ASSLReviewTMResults.FileIndex}(SyllableStart);
+            handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex}(end + 1) = TempOnsets(i);
+            handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex}(end + 1) = TempOffsets(i);
+
+            [SortedVals, SortedIndices] = sort(handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex});
+            handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllOnsets{handles.ASSLReviewTMResults.FileIndex}(SortedIndices);
+            handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllOffsets{handles.ASSLReviewTMResults.FileIndex}(SortedIndices);
+            handles.ASSLReviewTMResults.SyllLabels{handles.ASSLReviewTMResults.FileIndex} = handles.ASSLReviewTMResults.SyllLabels{handles.ASSLReviewTMResults.FileIndex}(SortedIndices);
+        end
+        
+        [handles.ASSLReviewTMResults.SpecAxisLimits, handles.ASSLReviewTMResults.LabelAxisLimits, handles.ASSLReviewTMResults.AmpAxisLimits] = ASSLReviewTMPlotData(handles, Time, LogAmplitude);
+
+        axes(handles.ReviewSpecAxis);
+        axis(handles.ASSLReviewTMResults.ZoomSpecAxisLimits);
+
+        axes(handles.ReviewLabelAxis);
+        axis(handles.ASSLReviewTMResults.ZoomLabelAxisLimits);
+
+        axes(handles.ReviewAmplitudeAxis);
+        axis(handles.ASSLReviewTMResults.ZoomAmpAxisLimits);
+    end
+end
+    
+set(handles.InstructionsTextLabel, 'String', 'Instructions:');
+guidata(hObject, handles);
+
+
+% --- Executes on slider movement.
+function SpectrumFloorSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to SpectrumFloorSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+handles.ASSLReviewTMResults.SpectFloor = get(hObject, 'Value');
+ASSLAdjustSpectrogram(handles.ASSLReviewTMResults.SpectFloor, handles.ASSLReviewTMResults.SpectCeil, handles.ASSLReviewTMResults.Brightness, 'hot', 'classic', handles.ReviewSpecAxis);
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function SpectrumFloorSlider_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to SpectrumFloorSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function SpectrumCeilSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to SpectrumCeilSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+handles.ASSLReviewTMResults.SpectCeil = get(hObject, 'Value');
+ASSLAdjustSpectrogram(handles.ASSLReviewTMResults.SpectFloor, handles.ASSLReviewTMResults.SpectCeil, handles.ASSLReviewTMResults.Brightness, 'hot', 'classic', handles.ReviewSpecAxis);
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function SpectrumCeilSlider_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to SpectrumCeilSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function BrightnessSlider_Callback(hObject, eventdata, handles)
+% hObject    handle to BrightnessSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+handles.ASSLReviewTMResults.Brightness = get(hObject, 'Value');
+ASSLAdjustSpectrogram(handles.ASSLReviewTMResults.SpectFloor, handles.ASSLReviewTMResults.SpectCeil, handles.ASSLReviewTMResults.Brightness, 'hot', 'classic', handles.ReviewSpecAxis);
+guidata(hObject, handles);
+
+% --- Executes during object creation, after setting all properties.
+function BrightnessSlider_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to BrightnessSlider (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end

@@ -29,3 +29,5 @@ else
         [SpecAxisLimits, LabelAxisLimits, AmpAxisLimits] = ASSLReviewPlotDataLowRes(DataStruct.DirName, DataStruct.FileName{DataStruct.FileIndex}, DataStruct.FileType, Time, LogAmplitude, handles.ReviewSpecAxis, handles.ReviewAmplitudeAxis, handles.ReviewLabelAxis);
     end
 end
+
+ASSLAdjustSpectrogram(handles.ASSLReviewTMResults.SpectFloor, handles.ASSLReviewTMResults.SpectCeil, handles.ASSLReviewTMResults.Brightness, 'hot', 'classic', handles.ReviewSpecAxis);
