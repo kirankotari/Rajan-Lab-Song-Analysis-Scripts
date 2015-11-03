@@ -96,7 +96,7 @@ axes('Position',[0.085 0.2 0.89 0.63]);
 cm = disp_idx_spect(idx_spect, time_spect, freq_spect, -55, ...
         0, 2, ColourMap, 'classic');
 axis([t_min t_max 300 8000]);
-set(gca, 'FontSize', 14, 'FontWeight', 'bold');
+set(gca, 'FontSize', 14, 'FontWeight', 'bold', 'Color', 'w');
 xlabel('Time (sec)', 'FontSize', 14, 'FontWeight', 'bold');
 ylabel('Frequency (Hz)', 'FontSize', 14, 'FontWeight', 'bold');
 title(filename, 'FontSize', 14, 'FontWeight', 'bold');
@@ -106,4 +106,5 @@ hold on;
 %plot(time, (filtsong2 * 1000) + 14000,'r');
 %NoteTimes = SmoothSong > 10*RMS;
 %plot(time,NoteTimes * 14000,'k');
+
 disp('Finished');

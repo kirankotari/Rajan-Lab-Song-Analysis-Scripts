@@ -92,16 +92,12 @@ t_max = time(end); %convert to ms
 time_spect = [t_min, t_max];   
 axes(gca);
 hold off;
-cm = disp_idx_spect(idx_spect, time_spect, freq_spect, -50, ...
-        10, 1.2, 'hot', 'classic');
+cm = disp_idx_spect(idx_spect, time_spect, freq_spect, -55, ...
+        0, 2, 'hot', 'classic');
 axis([t_min t_max 300 8000]);
 set(gca, 'FontSize', 10);
 set(gca, 'XTick', []);
 ylabel('Frequency (Hz)', 'FontSize', 12);
 zoom xon;
 hold on;
-%plot(time, (filtsong * 1000) + 12000);
-%plot(time, (filtsong2 * 1000) + 14000,'r');
-%NoteTimes = SmoothSong > 10*RMS;
-%plot(time,NoteTimes * 14000,'k');
 disp('Finished');

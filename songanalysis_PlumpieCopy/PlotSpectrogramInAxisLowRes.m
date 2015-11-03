@@ -74,7 +74,7 @@ h = ones(1, Len)/Len;
 nfft=round(Fs*8/1000);
 nfft = 2^nextpow2(nfft);
 spect_win = hanning(nfft);
-noverlap = round(0.5*length(spect_win)); %number of overlapping points       
+noverlap = round(0.3*length(spect_win)); %number of overlapping points       
 
 %now calculate spectrogram
 %     [spect, freq, time_song] = specgram(filtsong, nfft, Fs, spect_win, noverlap);
@@ -92,7 +92,7 @@ t_max = time(end); %convert to ms
 time_spect = [t_min, t_max];   
 axes(gca);
 hold off;
-cm = disp_idx_spect(idx_spect, time_spect, freq_spect, -50, ...
+cm = disp_idx_spect(idx_spect, time_spect, freq_spect, -55, ...
         10, 1.2, 'hot', 'classic');
 axis([t_min t_max 300 8000]);
 set(gca, 'FontSize', 10);
