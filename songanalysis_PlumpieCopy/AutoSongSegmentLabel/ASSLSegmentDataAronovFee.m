@@ -1,11 +1,22 @@
-function [onsets, offsets] = ASSLSegmentDataAronovFee(smooth, Fs, min_int, min_dur, threshold)
+function [onsets, offsets] = ASSLSegmentDataAronovFee(smooth, Fs, min_int, min_dur, threshold, varargin)
+
+if (nargin > 5)
+    BoutOrNot = varargin{1};
+else
+    BoutOrNot = 0;
+end
 
 % If threshold is < median(data), then return empty onsets and offsets as
-% this means the threshold is too low.
-if (threshold(1) < median(smooth))
-    onsets = [];
-    offsets = [];
-    return;
+% this means the threshold is too low. 
+% Do this check only if the data being segmented comes from a large file. 
+% If it comes from only a bout, then don't apply this.
+
+if (BoutOrNot == 0)
+    if (threshold(1) < median(smooth))
+        onsets = [];
+        offsets = [];
+        return;
+    end
 end
 
 % segment takes smoothed filtered song and returns vectors of note onsets and offsets
