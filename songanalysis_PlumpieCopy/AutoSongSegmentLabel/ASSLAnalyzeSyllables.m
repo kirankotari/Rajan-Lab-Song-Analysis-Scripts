@@ -22,7 +22,7 @@ function varargout = ASSLAnalyzeSyllables(varargin)
 
 % Edit the above text to modify the response to help ASSLAnalyzeSyllables
 
-% Last Modified by GUIDE v2.5 03-Nov-2014 16:33:21
+% Last Modified by GUIDE v2.5 16-Oct-2015 23:49:30
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -726,10 +726,26 @@ function PickSyllableButton_Callback(hObject, eventdata, handles)
 % Get syllable
 axes(handles.ASSLFeaturePlotAxis);
 [x, y, button] = ginput(1);
-x = (x - mean(handles.DataStruct.FeatValues(:, handles.ASSLAS.XVal)))/std(handles.DataStruct.FeatValues(:, handles.ASSLAS.XVal));
-y = (y - mean(handles.DataStruct.FeatValues(:, handles.ASSLAS.YVal)))/std(handles.DataStruct.FeatValues(:, handles.ASSLAS.YVal));
 
-Num = knnsearch(zscore(handles.DataStruct.FeatValues(:,[handles.ASSLAS.XVal handles.ASSLAS.YVal])), [x y]);
+% First find out what syllables are currently being plotted
+SyllsToPlot = get(handles.SyllableListBox, 'Value');
+Indices = [];
+
+if (SyllsToPlot(1) == 1)
+    Indices = (1:1:length(handles.DataStruct.SyllIndexLabels));
+    Indices = Indices(:);
+else
+    for i = 1:length(SyllsToPlot),
+        TempIndices = find(handles.DataStruct.SyllIndexLabels == handles.ASSLAS.UniqueSylls(SyllsToPlot(i) - 1));
+        Indices = [Indices; TempIndices(:)];
+    end
+end
+
+x = (x - mean(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal)))/std(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal));
+y = (y - mean(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal)))/std(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal));
+
+Num = knnsearch(zscore(handles.DataStruct.FeatValues(Indices,[handles.ASSLAS.XVal handles.ASSLAS.YVal])), [x y]);
+Num = Indices(Num);
 %TempDistances = pdist2(zscore(handles.DataStruct.FeatValues(:,[handles.ASSLAS.XVal handles.ASSLAS.YVal])), [x y]);
 %[MinDist, MinDist_Index] = min(TempDistances);
 %Num = MinDist_Index;
@@ -776,7 +792,8 @@ if ((SyllOffset - SyllOnset) > (0.01 * Fs))
     PlotSpectrogramInAxis_SongVar(RawData, (1:1:length(RawData))/Fs, Fs, gca);
     axis([0 0.300 300 8000]);
     
-    LogAmplitude = ASSLCalculateLogAmplitudeAronovFee(RawData, Fs);
+    
+    LogAmplitude = ASSLCalculateLogAmplitudeAronovFee(RawData, Fs, (1:1:length(RawData))/Fs, handles.DataStruct.FFTWinSizeSegmenting, handles.DataStruct.FFTWinOverlapSegmenting, handles.DataStruct.HiPassCutOff, handles.DataStruct.LoPassCutOff);
     axes(handles.SyllAmpWF);
     plot((1:1:length(RawData))*1000/Fs, LogAmplitude, 'k');
     axis tight;
@@ -860,6 +877,194 @@ if (length(ASSLMainWindow) > 0)
     msgbox('Returned edit syllable details to Auto Song Segment Label');
 end
 
+% --- Executes on button press in RenameSelectSyllablesButton.
+function RenameSelectSyllablesButton_Callback(hObject, eventdata, handles)
+% hObject    handle to RenameSelectSyllablesButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+axes(handles.ASSLFeaturePlotAxis);
+Flag = 1;
+
+Index = 1;
+while (Flag == 1)
+    if (Index > 2)
+        ContourLine(Index) = plot(x(Index-2:Index-1), y(Index-2:Index-1), 'y', 'LineWidth', 2);
+    end
+    [Tempx, Tempy, button] = ginput(1);
+    if (isempty(button))
+        Flag = 0;
+    else
+        if (button == 3)
+            Flag = 0;
+        else
+            x(Index) = Tempx;
+            y(Index) = Tempy;
+        end
+    end
+    Index = Index + 1;
+end
+ContourLine(Index+1) = plot([x(end) x(1)], [y(end) y(1)], 'y', 'LineWidth', 2);
+
+% Now check if any of the limits have gone out of the plot axis
+TempAxis = axis;
+x(find(x < TempAxis(1))) = TempAxis(1);
+x(find(x > TempAxis(2))) = TempAxis(2);
+
+y(find(y < TempAxis(3))) = TempAxis(3);
+y(find(y > TempAxis(4))) = TempAxis(4);
+
+% Now find points inside the polygon
+% First find out what syllables are currently being plotted
+SyllsToPlot = get(handles.SyllableListBox, 'Value');
+Indices = [];
+
+if (SyllsToPlot(1) == 1)
+    Indices = (1:1:length(handles.DataStruct.SyllIndexLabels));
+    Indices = Indices(:);
+else
+    for i = 1:length(SyllsToPlot),
+        TempIndices = find(handles.DataStruct.SyllIndexLabels == handles.ASSLAS.UniqueSylls(SyllsToPlot(i) - 1));
+        Indices = [Indices; TempIndices(:)];
+    end
+end
+
+Sylls = inpolygon(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal), handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal), x, y);
+SyllsPlot = plot(handles.DataStruct.FeatValues(Indices(Sylls), handles.ASSLAS.XVal), handles.DataStruct.FeatValues(Indices(Sylls), handles.ASSLAS.YVal), 'yo', 'LineWidth', 2);
+uiwait(gcf, 2);
+
+NewSyllLabel = inputdlg('Enter the new syllable label', 'New syllable label');
+NewSyllLabel = NewSyllLabel{1};
+
+if (~isempty(Sylls))
+    handles.DataStruct.SyllIndexLabels(Indices(Sylls)) = NewSyllLabel;
+end
+
+for i = 1:length(ContourLine),
+    if (ContourLine(i) ~= 0)
+        delete(ContourLine(i));
+    end
+end
+delete(SyllsPlot);
+
+[handles] = RePlotSyllFeatures(handles);
+[handles] = ReAssignSyllDetails(handles);
+
+guidata(hObject, handles);
+disp('Finished renaming select syllables');
+
+
+% --- Executes on button press in DeleteSelectSyllablesButton.
+function DeleteSelectSyllablesButton_Callback(hObject, eventdata, handles)
+% hObject    handle to DeleteSelectSyllablesButton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+axes(handles.ASSLFeaturePlotAxis);
+Flag = 1;
+
+Index = 1;
+while (Flag == 1)
+    if (Index > 2)
+        ContourLine(Index) = plot(x(Index-2:Index-1), y(Index-2:Index-1), 'y', 'LineWidth', 2);
+    end
+    [Tempx, Tempy, button] = ginput(1);
+    if (isempty(button))
+        Flag = 0;
+    else
+        if (button == 3)
+            Flag = 0;
+        else
+            x(Index) = Tempx;
+            y(Index) = Tempy;
+        end
+    end
+    Index = Index + 1;
+end
+ContourLine(Index+1) = plot([x(end) x(1)], [y(end) y(1)], 'y', 'LineWidth', 2);
+
+% Now check if any of the limits have gone out of the plot axis
+TempAxis = axis;
+x(find(x < TempAxis(1))) = TempAxis(1);
+x(find(x > TempAxis(2))) = TempAxis(2);
+
+y(find(y < TempAxis(3))) = TempAxis(3);
+y(find(y > TempAxis(4))) = TempAxis(4);
+
+% First find out what syllables are currently being plotted
+SyllsToPlot = get(handles.SyllableListBox, 'Value');
+Indices = [];
+
+if (SyllsToPlot(1) == 1)
+    Indices = (1:1:length(handles.DataStruct.SyllIndexLabels));
+    Indices = Indices(:);
+else
+    for i = 1:length(SyllsToPlot),
+        TempIndices = find(handles.DataStruct.SyllIndexLabels == handles.ASSLAS.UniqueSylls(SyllsToPlot(i) - 1));
+        Indices = [Indices; TempIndices(:)];
+    end
+end
+
+% Now find points inside the polygon if there are more than 1 point in the
+% polygon boundaries
+
+if (length(x) > 1)
+    Sylls = inpolygon(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal), handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal), x, y);
+else
+    if (length(x) == 1)
+        x = (x - mean(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal)))/std(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.XVal));
+        y = (y - mean(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal)))/std(handles.DataStruct.FeatValues(Indices, handles.ASSLAS.YVal));
+        Sylls = knnsearch(zscore(handles.DataStruct.FeatValues(Indices,[handles.ASSLAS.XVal handles.ASSLAS.YVal])), [x y]);
+    end
+end
+
+SyllsPlot = plot(handles.DataStruct.FeatValues(Indices(Sylls), handles.ASSLAS.XVal), handles.DataStruct.FeatValues(Indices(Sylls), handles.ASSLAS.YVal), 'yo', 'LineWidth', 2);
+uiwait(gcf, 2);
+   
+Sylls = Indices(Sylls);
+if (~isempty(Sylls))
+    UniqueFiles_with_SyllsToDelete = unique(handles.DataStruct.SyllIndices(Sylls,1));
+    for i = (UniqueFiles_with_SyllsToDelete(:))',
+        DeleteSyllNums = handles.DataStruct.SyllIndices(intersect(Sylls, find(handles.DataStruct.SyllIndices(:,1) == i)),2);
+        DeleteSyllNums = DeleteSyllNums(:)';
+        
+        % First get rid of onsets, offsets and labels
+        handles.DataStruct.SyllOnsets{i}(DeleteSyllNums) = [];
+        handles.DataStruct.SyllOffsets{i}(DeleteSyllNums) = [];
+        handles.DataStruct.SyllLabels{i}(DeleteSyllNums) = [];
+        
+        % Now get rid of feature values corresponding to the files
+        for j = 1:length(handles.DataStruct.ToBeUsedFeatures),
+            eval(['handles.DataStruct.', handles.DataStruct.ToBeUsedFeatures{j}, '{', num2str(i), '}([', num2str(DeleteSyllNums), ']) = [];']);
+        end
+       
+        % Now get rid of raw feature values
+        RawFeatFields = fields(handles.DataStruct.Raw);
+        for j = 1:length(RawFeatFields),
+            eval(['handles.DataStruct.Raw.', RawFeatFields{j}, '{', num2str(i), '}([', num2str(DeleteSyllNums), ']) = [];']);
+        end
+    end
+    % Now get rid of syll index labels, featvalues, rawfeatvalues, syll
+    % indices
+    handles.DataStruct.SyllIndexLabels(Sylls) = [];
+    handles.DataStruct.SyllIndices(Sylls,:) = [];
+    handles.DataStruct.FeatValues(Sylls,:) = [];
+    handles.DataStruct.RawFeatValues(Sylls,:) = [];
+end
+
+for i = 1:length(ContourLine),
+    if (ContourLine(i) ~= 0)
+        delete(ContourLine(i));
+    end
+end
+delete(SyllsPlot);
+
+[handles] = RePlotSyllFeatures(handles);
+
+guidata(hObject, handles);
+disp('Finished deleting select syllables');
+
+
 % ========== Common function for committing changes to labels, onsets and offsets of every file ==================
 function [handles] = ReAssignSyllDetails(handles)
 
@@ -921,3 +1126,5 @@ for i = 1:length(PrevNextSyll),
     end
     ASSLASPlotData(handles, 1, handles.ASSLAS.Colors(handles.ASSLAS.UniqueSyllColors(PrevNextSyll(i))), handles.ASSLAS.Symbols(handles.ASSLAS.UniqueSyllSymbols(PrevNext(i))), 4, handles.ASSLNextSyllAxis, ClearAxis, Indices);
 end
+
+
