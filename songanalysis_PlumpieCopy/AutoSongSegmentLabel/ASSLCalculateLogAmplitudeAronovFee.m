@@ -17,7 +17,7 @@ end
 FilterForSong = fir1(80, [F_High*2/Fs F_Low*2/Fs], 'bandpass');
 FiltSong = filtfilt(FilterForSong, 1, RawData);
 
-SmoothWinSize = 5/1000;
+SmoothWinSize = FFTWinSize/1000;
  
 Window = ones(round(SmoothWinSize*Fs), 1);
 Window = Window/sum(Window);
