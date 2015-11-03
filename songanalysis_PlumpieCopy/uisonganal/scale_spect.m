@@ -27,4 +27,3 @@ spect = spect-(max(max(spect)));
 % set index values to range 1-100, with index indicating number of decibels from maximum
 % i.e. index = 1 for within 1 dB of max
  idx_spect=max(1,abs(floor(spect)));
-   

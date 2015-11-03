@@ -1,4 +1,4 @@
-function autocorr_ff_pinterp_plotnotes(RawDataDir, batch_in,note, ff_low, ff_hi,FileType, PlotOption) % feature added by Raghav as an argument
+function autocorr_ff_pinterp_plotnotes(RawDataDir, batch_in,note, NoteFileDir, ff_low, ff_hi,FileType, PlotOption) % feature added by Raghav as an argument
 
 % SK modified autocorr_ff_pinterp to plot syllables in which FF is
 % calculated.
@@ -119,8 +119,8 @@ while 1
        
       
        %if notefile exists, get it
-       if exist(fullfile('ASSLNoteFiles', [notefile, '.not.mat']))
-           load(fullfile('ASSLNoteFiles', [notefile, '.not.mat']));          %Fs, onsets, offsets and labels are defined
+       if exist(fullfile(NoteFileDir, [notefile, '.not.mat']))
+           load(fullfile(NoteFileDir, [notefile, '.not.mat']));          %Fs, onsets, offsets and labels are defined
        else disp(['cannot find ',notefile])
        end
        
