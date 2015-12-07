@@ -22,7 +22,7 @@ function varargout = ASSLReviewTemplateMatching(varargin)
 
 % Edit the above text to modify the response to help ASSLReviewTemplateMatching
 
-% Last Modified by GUIDE v2.5 03-Nov-2015 00:33:33
+% Last Modified by GUIDE v2.5 02-Dec-2015 15:39:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1522,3 +1522,5 @@ function BrightnessSlider_CreateFcn(hObject, eventdata, handles)
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
+
+

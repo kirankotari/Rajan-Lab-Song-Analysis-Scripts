@@ -22,7 +22,7 @@ function varargout = ASSLAnalyzeSyllables(varargin)
 
 % Edit the above text to modify the response to help ASSLAnalyzeSyllables
 
-% Last Modified by GUIDE v2.5 16-Oct-2015 23:49:30
+% Last Modified by GUIDE v2.5 02-Dec-2015 15:34:55
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1126,5 +1126,3 @@ for i = 1:length(PrevNextSyll),
     end
     ASSLASPlotData(handles, 1, handles.ASSLAS.Colors(handles.ASSLAS.UniqueSyllColors(PrevNextSyll(i))), handles.ASSLAS.Symbols(handles.ASSLAS.UniqueSyllSymbols(PrevNext(i))), 4, handles.ASSLNextSyllAxis, ClearAxis, Indices);
 end
-
-
